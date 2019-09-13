@@ -104,3 +104,4 @@ u_grid[-3] = u_grid[-2] = u_grid[-1]
 
 b = bspline(d, u_grid)
 s = b(0.2, d)
+print('s(0.2) =', s)
