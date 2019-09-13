@@ -29,7 +29,7 @@ class bspline:
         self.d = d
         i_hot = self.findhot(u)
         s = self.blossom(self.d, self.u, i_hot)
-        #self.plot()
+        self.plot()
         return s
     
     def findhot(self, u):
@@ -63,15 +63,15 @@ class bspline:
     
     def plot(self):
         import matplotlib.pyplot as plt
-        data =  self.coord
-        x_val = [x[0] for x in data]
-        y_val = [x[1] for x in data]
+        x_val = [x[0] for x in self.coord]
+        y_val = [x[1] for x in self.coord]
         plt.plot(x_val,y_val,'or')
-        u = linspace(0, 10, 100)
-        s = zeros(100)
+        u = linspace(0.0000001, 0.999999, 100)
+        s = zeros((100, 2))
         for j in range(0, 100):
-            s[j] = self.__call__(u[j], self.d)
-        plt.plot(u, s)
+            i_hot = self.findhot(u[j])
+            s[j, :] = self.blossom(self.d, u[j], i_hot)
+        plt.plot(s[:,0], s[:,1])
         plt.show()
 
 d = [(-12.73564, 9.03455),
@@ -104,4 +104,3 @@ u_grid[-3] = u_grid[-2] = u_grid[-1]
 
 b = bspline(d, u_grid)
 s = b(0.2, d)
-# Vid körning failar koden pga att i_hot blir skum vilket smittar av sig på hotstart och hotend...
