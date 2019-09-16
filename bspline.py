@@ -119,7 +119,7 @@ class bspline:
     
         def N(u):        
             if k == 0:
-                if u_grid[j-1] == u_grid[j]: # Här är fel, om j=0 blir det knas
+                if u_grid[j-1] == u_grid[j]:
                     return 0.
                 elif u >= u_grid[j-1] and u < u_grid[j]:
                     return 1.
