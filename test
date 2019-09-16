@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Sep 16 13:21:12 2019
-
 @author: mariagunnarsson
 """
 
@@ -10,7 +9,10 @@ import unittest
 from bspline import *
 
 class  TestBasis(unittest.TestCase):
-    d = [(-12.73564, 9.03455),
+    
+        
+    def setUp(self):
+        self.d = [(-12.73564, 9.03455),
          (-26.77725, 15.89208),
          (-42.12487, 20.57261),
          (-15.34799, 4.57169),
@@ -35,16 +37,14 @@ class  TestBasis(unittest.TestCase):
         (27.59321, 9.68786),
         (39.67575, 17.30712)]
     
-    u_grid = linspace(0, 1, 26)
-    u_grid[ 1] = u_grid[ 2] = u_grid[ 0]
-    u_grid[-3] = u_grid[-2] = u_grid[-1]
-        
-    def setUp(self):
-        self.spline = bspline(u_grid, d)       
+        u_grid = linspace(0, 1, 26)
+        u_grid[ 1] = u_grid[ 2] = u_grid[ 0]
+        u_grid[-3] = u_grid[-2] = u_grid[-1]
+        self.spline = bspline(u_grid, self.d)       
         
     def testPositive(self):        
         d = self.spline.returnd()
-        for j in range(len(d)):
+        for j in range(len(self.d)):
             N = self.spline.basis(j) #Här det blir knas
             for i in self.spline.u_grid:
                 print(i)
@@ -54,7 +54,7 @@ class  TestBasis(unittest.TestCase):
                 self.assertFalse( Ni < 0 )
                 
     def testdeBoor(self):
-        s = self.spline(0.2, d, 15)
+        s = self.spline(0.2, self.d, 15)
         self.assertEqual(s, (-31.902191666666667, 6.476558333333334))
         
     def testSum(self):
@@ -62,6 +62,3 @@ class  TestBasis(unittest.TestCase):
         
 if __name__ == '__main__':
     unittest.main()
-         
-                
-    
