@@ -64,9 +64,19 @@ class  TestBasis(unittest.TestCase):
                 Ny[i] = N(u[i])
             plt.plot(u, Ny)
             N_sum = N_sum + Ny
-        self.assertEqual(N_sum.all(), 1)
         plt.plot(u, N_sum)
         plt.show()
+        self.assertEqual(N_sum.all(), 1)
+    
+    def testNmatrixPositive(self):
+        ourSpline = self.spline
+        N = ourSpline.Nmatrix()
+        self.assertTrue(N.all() >= 0)
+        
+    def testXiPositive(self):
+        sp = self.spline
+        xi = sp.ma_version1()
+        self.assertTrue(xi.all() >= 0)
         
 if __name__ == '__main__':
     unittest.main()

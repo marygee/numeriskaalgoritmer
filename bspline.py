@@ -110,18 +110,43 @@ class bspline:
         plt.plot(d1[:,0], d1[:,1])
         plt.plot(d2[:,0], d2[:,1])
         plt.plot(d3[:,0], d3[:,1])
+    
+    def Nmatrix(self):
+        N_matrix = zeros([len(self.u_grid)-2,len(self.u_grid)-2]) # Initializing the Nmatrix with zeros
+        XI = self.ma_version1() # Here I'm creating the xi array
         
+        for i in range(len(self.u_grid)-2):
+            N_basis = self.basis(i)
+            for j in range(len(self.u_grid)-2):
+                N_matrix[j,i] = N_basis(XI[j])
+                
+        return N_matrix
+    
+    def ma_version1(self):
+        """
+        Moving average version 1
+        """
+        u_grid=self.u_grid
+        xi=(u_grid[:-2] + u_grid[1:-1] + u_grid[2:])/3.
+        return array(xi)
+    
     def basis(self,j,k=3):
         """
-        Runs the recursive algorithm for the basis functions
+        Runs the recursive algorithm for the basis functions. 
+        This returns a function, not a number. On this function you can later 
+        perform the N(u) method to get the function value.
         """
         u_grid = self.u_grid
         
-        #u_grid = append(u_grid,[u_grid[-1],u_grid[-1]])
-        u_grid = append(u_grid,[0,0])
+        u_grid = append(u_grid,[u_grid[-1],u_grid[-1]])
+        #u_grid = append(u_grid,[0,0])
         u_grid = insert(u_grid,0,[0,0])
     
-        def N(u):        
+        def N(u):
+            """
+            This is a nested method that performs the actual recursion and
+            returns a scalar.
+            """
             if k == 0:
                 if u_grid[j-1] == u_grid[j]:
                     return 0.
@@ -141,6 +166,8 @@ class bspline:
   
             return a*self.basis(j, k-1)(u) + b*self.basis(j+1, k-1)(u)
         return N
+    
+    
 
 
 
