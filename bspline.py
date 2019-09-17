@@ -116,6 +116,10 @@ class bspline:
         Runs the recursive algorithm for the basis functions
         """
         u_grid = self.u_grid
+        
+        #u_grid = append(u_grid,[u_grid[-1],u_grid[-1]])
+        u_grid = append(u_grid,[0,0])
+        u_grid = insert(u_grid,0,[0,0])
     
         def N(u):        
             if k == 0:
@@ -130,7 +134,7 @@ class bspline:
                 a = 0.
             else:
                 a = (u-u_grid[j-1])/(u_grid[j+k-1]-u_grid[j-1])
-            if u_grid[j+k] == u_grid[j]:
+            if (j+k)>len(u_grid)-1 or u_grid[j+k] == u_grid[j]:
                 b = 0.
             else:
                 b = (u_grid[j+k]-u)/(u_grid[j+k]-u_grid[j])  
