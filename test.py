@@ -57,13 +57,14 @@ class  TestBasis(unittest.TestCase):
     def testSum(self):
         N_sum = zeros(1000)
         u = linspace(0.00001, 0.999999, 1000)
-        for j in range(1, len(self.d)-1):
+        for j in range(len(self.spline.u_grid)):
             N = self.spline.basis(j)
             Ny = zeros(1000)
             for i in range(1000):
                 Ny[i] = N(u[i])
             plt.plot(u, Ny)
             N_sum = N_sum + Ny
+        self.assertEqual(N_sum.all(), 1)
         plt.plot(u, N_sum)
         plt.show()
         
