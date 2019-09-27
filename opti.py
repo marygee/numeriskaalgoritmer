@@ -160,7 +160,7 @@ class Optimization:
     
     def block1(self, a0, aU, aL, fa):
         tau = 0.1 # These should probably be changed
-        xi = 
+        xi = 0.2
         
         delta_a0 = self.extrapol(a0, aU, aL, fa)
         delta_a0 = max(delta_a0, tau*(a0-aL))
