@@ -10,54 +10,58 @@ from scipy import optimize
 import matplotlib.pyplot as plt
 
 class Optimization:
-    
-    def __init__(self, func, tol=10**(-7), h=10**(-8), eps=10**(-8), ra=0.25, 
-                 sigma=0.5, tau=0.1, xi=0.2):
+    def __init__(self, func, xtol=10**(-9), h=10**(-8), eps=10**(-8), ra=0.1, 
+                 sigma=0.7, tau=0.1, xi=9.):
         self.func = func
-        self.tol = tol
+        self.xtol = xtol 
         self.h = h
         self.eps = eps
         self.ra = ra
         self.sigma = sigma # Needs to be greater than ra
-        self.tau = tau
+        self.tau = tau 
         self.xi = xi
         
-    def __call__(self):
-        pass
-
-    def newton(self, x0, method='exact', newton = 'classical'):    
+    def __call__(self,x0, method='exact', newton = 'classical'):
         xold=x0
+        xolder=[0.95*x for x in x0] #????????????????????????????????????????????????????
+        try:
+            Hold = identity(len(x0)) #???????????????????????????????????????????????
+        except TypeError:
+            Hold = 1
+        Hk = self.broyden(xold,xolder,Hold)
         for i in range(0,1000):
             g = self.grad(xold, self.func) 
             if newton == 'classical':
                 G = self.hessian(xold)
                 s = solve(G,g)
-            elif newton == 'badbroyden':
-                xolder=[0.95*x for x in x0]
-                try:
-                    Qold = identity(len(x0))
-                except TypeError:
-                    Qold = 1
-                Q = self.broyden(xold, xolder, Qold, 'bad')
+            elif newton == 'goodbroyden':
+                Q = self.broyden(xold, xolder, Hold, 'good')
+                Hold=Q
                 s = solve(Q,g)
                 xolder = xold
-            elif newton == 'goodbroyden':
-                xolder=[0.95*x for x in x0]
-                try:
-                    Hold = identity(len(x0))
-                except TypeError:
-                    Hold = 1
-                H = self.broyden(xold, xolder, Hold, 'good')
+            elif newton == 'badbroyden':
+                H = self.broyden(xold, xolder, Hold, 'bad')
+                Hold=H
                 s = H@g
                 xolder = xold
-            
+            elif newton == 'DFP2' :
+                H = self.DFP2(xold, xolder, Hk)
+                Hold=H
+                s = H@g
+                xolder = xold
+            elif newton == 'BFG2':
+                H = self.BFG2(xold, xolder, Hk)
+                Hold=H
+                s = H@g
+                xolder = xold
+                
             fa = lambda a: self.func(xold - a*s)
-            alpha = self.linesearch(fa, method, xold)
+            alpha = self.linesearch(fa, method)
             
             xnew = xold-alpha*s
             
-            if norm(xold-xnew) < self.tol:
-                return xold
+            if norm(xold-xnew) < self.xtol:
+                return xnew
             xold = xnew
         return None
          
@@ -98,23 +102,35 @@ class Optimization:
         
         return hessian
     
-    def broyden(self, xold, xolder, Qold, quality = 'good'):
+    def broyden(self, xold, xolder, Qold, quality = 'bad'):
         delta = array(xold) - array(xolder)
         gamma = self.grad(xold, self.func) - self.grad(xolder, self.func)
-        if quality == 'bad':
-            v = (gamma - Qold*delta)/(delta.T*delta)
+        if quality == 'good':
+            v = (gamma - Qold@delta)/(delta.T@delta)
             w = delta
-            Q = Qold + v*w.T
+            Q = Qold + v@w.T
             return (Q + Q.T)/2
-        elif quality == 'good':
+        elif quality == 'bad':
             Hold = Qold
-            u = delta - Hold*gamma
-            a = 1/(u.T*gamma)
-            H = Hold + a*u*u.T
+            u = delta - Hold@gamma
+            a = 1/(u.T@gamma)
+            H = Hold + a*u@u.T
             return (H + H.T)/2
-            
-            
     
+    def DFP2(self,xold,xolder,Hk):
+       delta = array(xold) - array(xolder)
+       gamma = self.grad(xold, self.func) - self.grad(xolder, self.func)
+       H = Hk + (delta*delta.T/delta.T*gamma) -(Hk*gamma*gamma.T*Hk)/(gamma.T*Hk*gamma)
+       return (H+H.T)/2
+       
+    def BFG2(self,xold,xolder,Hk):
+       delta = array(xold) - array(xolder)
+       gamma = self.grad(xold, self.func) - self.grad(xolder, self.func)
+       B= (1+(gamma.T*Hk*gamma/delta.T*gamma))*(delta*delta.T/delta.T*gamma)
+       C = (delta*gamma.T*Hk+Hk*gamma*gamma*delta.T)/(delta.T*gamma)
+       H = Hk+B-C 
+       return H
+        
     def condition(self, method, fa, a0, aU, aL):
         """
         This is a method to calculate the left and right conditions. 
@@ -129,7 +145,9 @@ class Optimization:
         """
         ra = self.ra
         sigma = self.sigma
+        
         dfaL = self.grad(aL,fa) # This is f_a prime of aL
+        print(dfaL)
         if method=='g':
             LC = (fa(a0) >= fa(aL) + (1-ra)*(a0-aL)*dfaL)
             RC = (fa(a0) <= fa(aL) + ra*(a0-aL)*dfaL)
@@ -139,23 +157,29 @@ class Optimization:
         return [LC, RC]
     
     
-    def linesearch(self, fa, method, xold):
+    def linesearch(self, fa, method):
         if method=='exact':
-            a0 = optimize.fmin(fa,xold)
+            a0 = optimize.fmin(fa,0.5, disp = 0) # gör tyst
             return a0
 
-        a0 = 1.0
+        a0 = 5.0
         aL = 0.
-        aU = 10**9
+        aU = 1.e99
         
         [LC, RC] = self.condition(method, fa, a0, aU, aL)
+        
+        k = 0
         
         while not (LC and RC):
             if  not LC:
                 [a0, aU, aL] = self.block1(a0, aU, aL, fa)
+                
             else:
                 [a0, aU, aL] = self.block2(a0, aU, aL, fa)
             [LC, RC] = self.condition(method, fa, a0, aU, aL)
+            print(k)
+            k = k+1
+            
         return a0
         
     
@@ -171,7 +195,7 @@ class Optimization:
         return [a0, aU, aL]
     
     def block2(self, a0, aU, aL, fa):
-        tau = self.tau 
+        tau = self.tau
         
         aU = min(a0,aU)
         bar_a0 = self.interpol(a0, aU, aL, fa)
@@ -181,6 +205,12 @@ class Optimization:
         return [a0, aU, aL]
     
     def extrapol(self, a0, aU, aL, fa):
+#        print(aL)
+#        print(a0)
+#        print(fa)
+#        print(self.grad(aL,fa) - self.grad(a0,fa))
+#        if a0 == aL:
+#            return 0
         return (a0-aL)*self.grad(a0,fa)/(self.grad(aL,fa) - self.grad(a0,fa))
     
     def interpol(self, a0, aU, aL, fa):
@@ -203,4 +233,4 @@ def f(x):
     return 100*(x[1]-x[0]**2)**(2) + (1-x[0])**2
 O = Optimization(f) 
 #H_matrix = O.Hessian(array([0.4,0.6]))         
-x = O.newton([0.8,0.8], method = 'g', newton = 'goodbroyden')
+x = O([1.3, 1.2], method = 'w', newton = 'classical')
