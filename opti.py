@@ -66,7 +66,7 @@ class Optimization:
             f = zeros(len(x))
             for i in range(len(x)):
                 ei = zeros(len(x))
-                ei[i] = h
+                ei[i] = self.h
                 f[i] = (func(x+ei) - func(x))/self.h
             return f
         except TypeError:
