@@ -11,15 +11,21 @@ import matplotlib.pyplot as plt
 
 class Optimization:
     
-    def __init__(self, func):
+    def __init__(self, func, tol=10**(-7), h=10**(-8), eps=10**(-8), ra=0.25, 
+                 sigma=0.5, tau=0.1, xi=0.2):
         self.func = func
+        self.tol = tol
+        self.h = h
+        self.eps = eps
+        self.ra = ra
+        self.sigma = sigma # Needs to be greater than ra
+        self.tau = tau
+        self.xi = xi
         
     def __call__(self):
         pass
 
-    def newton(self,x0, method='exact', newton = 'classical'):
-
-        tol =  10**(-7)
+    def newton(self, x0, method='exact', newton = 'classical'):    
         xold=x0
         for i in range(0,1000):
             g = self.grad(xold, self.func) 
@@ -50,24 +56,21 @@ class Optimization:
             
             xnew = xold-alpha*s
             
-            if norm(xold-xnew) < tol:
+            if norm(xold-xnew) < self.tol:
                 return xold
             xold = xnew
         return None
          
     def grad(self,x, func):
-        h = 10**(-8)
-        
-        
         try:
             f = zeros(len(x))
             for i in range(len(x)):
                 ei = zeros(len(x))
                 ei[i] = h
-                f[i] = (func(x+ei) - func(x))/h
+                f[i] = (func(x+ei) - func(x))/self.h
             return f
         except TypeError:
-            return (func(x+h) - func(x))/h
+            return (func(x+self.h) - func(x))/self.h
         
         # This is in case x isn't a list
 #        if type(x) == int or type(x) == float:
@@ -82,17 +85,16 @@ class Optimization:
     
     def hessian(self,x):
         hessian = zeros((len(x),len(x)))
-        eps = 10**-8
         func = self.func
         
         for i in range(len(x)):     # 0, 1
             ei = zeros(len(x))
-            ei[i] = eps
+            ei[i] = self.eps
             
             for j in range(len(x)): # 0, 1
                 ej = zeros(len(x))
-                ej[j] = eps
-                hessian[i,j] = (func(x+ei+ej) - func(x+ei) - func(x+ej) + func(x))/eps**2
+                ej[j] = self.eps
+                hessian[i,j] = (func(x+ei+ej) - func(x+ei) - func(x+ej) + func(x))/self.eps**2
         
         return hessian
     
@@ -125,9 +127,8 @@ class Optimization:
         Return:
             [LC, RC] = [Boolean, Boolean]
         """
-        ra = 0.25
-        sigma = 0.5 # Needs to be greater than ra
-        
+        ra = self.ra
+        sigma = self.sigma
         dfaL = self.grad(aL,fa) # This is f_a prime of aL
         if method=='g':
             LC = (fa(a0) >= fa(aL) + (1-ra)*(a0-aL)*dfaL)
@@ -159,8 +160,8 @@ class Optimization:
         
     
     def block1(self, a0, aU, aL, fa):
-        tau = 0.1 # These should probably be changed
-        xi = 0.2
+        tau = self.tau
+        xi = self.xi
         
         delta_a0 = self.extrapol(a0, aU, aL, fa)
         delta_a0 = max(delta_a0, tau*(a0-aL))
@@ -170,7 +171,7 @@ class Optimization:
         return [a0, aU, aL]
     
     def block2(self, a0, aU, aL, fa):
-        tau = 0.1 # This should probably be changed
+        tau = self.tau 
         
         aU = min(a0,aU)
         bar_a0 = self.interpol(a0, aU, aL, fa)
