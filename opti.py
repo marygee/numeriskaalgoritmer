@@ -43,6 +43,7 @@ class Optimization:
         self.sigma = sigma # Needs to be greater than ra
         self.tau = tau 
         self.xi = xi
+        self.norm = []
         
     def __call__(self, method='exact', newton = 'classical'):
         """
@@ -74,9 +75,10 @@ class Optimization:
         except TypeError:
             Hold = 1
         
-        Hk = self.broyden(xold,xolder,Hold)
+        Hk = self.broyden(xold,xolder,Hold, 'good')
         
         for i in range(0,1000):
+            print('\n', 'Update of x:', i)
             if self.ProblemClass.CheckGrad(): # Checking if the user has already added a grad function in the problem class
                 g = self.ProblemClass.grad(xold)
             else:
@@ -88,13 +90,13 @@ class Optimization:
                 else:
                     G = self.hessian(xold)
                 s = solve(G,g)
-            elif newton == 'goodbroyden':
-                Q = self.broyden(xold, xolder, Hold, 'good')
+            elif newton == 'badbroyden':
+                Q = self.broyden(xold, xolder, Hold, 'bad')
                 Hold=Q
                 s = solve(Q,g)
                 xolder = xold
-            elif newton == 'badbroyden':
-                H = self.broyden(xold, xolder, Hold, 'bad')
+            elif newton == 'goodbroyden':
+                H = self.broyden(xold, xolder, Hold, 'good')
                 Hold=H
                 s = H@g
                 xolder = xold
@@ -103,12 +105,14 @@ class Optimization:
                 Hold=H
                 s = H@g
                 xolder = xold
-            elif newton == 'BFG2':
+            elif newton == 'BFG2':         
                 H = self.BFG2(xold, xolder, Hk)
                 Hold=H
                 s = H@g
                 xolder = xold
-                
+                G = self.hessian(xold)
+                self.norm = append(self.norm,norm(H-inv(G)))
+    
             fa = lambda a: self.func(xold - a*s)
             alpha = self.linesearch(fa, method)
             
@@ -166,7 +170,7 @@ class Optimization:
         
         return hessian
     
-    def broyden(self, xold, xolder, Qold, quality = 'bad'):
+    def broyden(self, xold, xolder, Qold, quality = 'good'):
         """
         Calculates a Broyden rank 1 update of H. 
         -----
@@ -184,13 +188,10 @@ class Optimization:
         
         delta = array(xold) - array(xolder)
         gamma = self.grad(xold, self.func) - self.grad(xolder, self.func)
-        if quality == 'good':
-            v = (gamma - Qold@delta)/(delta.T@delta)
-            w = delta
-            Q = Qold + v@w.T
-            return (Q + Q.T)/2
+        if quality == 'bad':
+            return None
         
-        elif quality == 'bad':
+        elif quality == 'good':
             Hold = Qold
             u = delta - Hold@gamma
             a = 1/(u.T@gamma)
@@ -225,6 +226,7 @@ class Optimization:
         OUTPUT: 
             H               - The H-matrix at point k+1
         """
+
         delta = array(xold) - array(xolder)
         gamma = self.grad(xold, self.func) - self.grad(xolder, self.func)
         B = (1+(gamma.T*Hk*gamma)/(delta.T@gamma))*(delta@delta.T)/(delta.T@gamma)
@@ -250,7 +252,7 @@ class Optimization:
         sigma = self.sigma
         
         dfaL = self.grad(aL,fa) # This is f_a prime of aL
-        print(dfaL)
+        print('f_a prime of aL:', dfaL)
         if method=='g':
             LC = (fa(a0) >= fa(aL) + (1-ra)*(a0-aL)*dfaL)
             RC = (fa(a0) <= fa(aL) + ra*(a0-aL)*dfaL)
@@ -286,13 +288,13 @@ class Optimization:
         k = 0
         
         while not (LC and RC):
+            print('Iteration in current linesearch:', k, '\n')
             if  not LC:
                 [a0, aU, aL] = self.block1(a0, aU, aL, fa)
                 
             else:
                 [a0, aU, aL] = self.block2(a0, aU, aL, fa)
             [LC, RC] = self.condition(method, fa, a0, aU, aL)
-            print(k)
             k = k+1
             
         return a0
@@ -416,8 +418,7 @@ class Problem:
             return False
         else:
             return True
-    
-    
+ 
 def f(x):
     return 100*(x[1]-x[0]**2)**(2) + (1-x[0])**2
 def easy(x):
@@ -425,7 +426,5 @@ def easy(x):
 
 P = Problem(f,[0.9,1.1])
 O = Optimization(P) 
-#H_matrix = O.Hessian(array([0.4,0.6]))         
-x = O(method = 'g', newton = 'goodbroyden')
-print(x)
+x = O(method = 'w', newton = 'BFG2')
 O.plot()
