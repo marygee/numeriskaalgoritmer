@@ -230,7 +230,7 @@ class Optimization:
         B = (1+(gamma.T*Hk*gamma)/(delta.T@gamma))*(delta@delta.T)/(delta.T@gamma)
         C = ((delta*gamma.T*Hk+Hk*gamma*delta.T))/(delta.T@gamma)
         H = Hk+B-C 
-       return H
+        return H
         
     def condition(self, method, fa, a0, aU, aL):
         """
@@ -299,7 +299,7 @@ class Optimization:
         
     
     def block1(self, a0, aU, aL, fa):
-         """
+        """
         Algorithm for the inexact line search. 
         -----
         INPUT: 
@@ -312,6 +312,7 @@ class Optimization:
             aL              - The new min value of the acceptable point
             aU              - The new max value of the acceptable point
         """
+        
         tau = self.tau
         xi = self.xi
         
@@ -323,7 +324,7 @@ class Optimization:
         return [a0, aU, aL]
     
     def block2(self, a0, aU, aL, fa):
-         """
+        """
         Algorithm for the inexact line search.
         -----
         INPUT: 
@@ -336,6 +337,7 @@ class Optimization:
             aL              - The new min value of the acceptable point
             aU              - The new max value of the acceptable point
         """
+        
         tau = self.tau
     
         aU = min(a0,aU)
@@ -389,7 +391,7 @@ class Optimization:
         cp = plt.contour(X1,X2,self.func((X1,X2)),[0,1,3,10,50,100,500,800],colors='black')
         plt.clabel(cp, inline=True, fontsize=10)
         plt.plot(self.xx[0::2],self.xx[1::2],'o',color='black')
-        plt.plot(self.xx[-1],self.xx[-2],'o',color='red')
+        plt.plot(self.xx[-2],self.xx[-1],'o',color='red')
         plt.show()
         pass      
     
