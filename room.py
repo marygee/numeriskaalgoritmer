@@ -40,11 +40,6 @@ class Room(ABC):
         """
         Replaces the mesh with a new mesh.
         """
-        #try:
-        #    newMesh.shape == self.mesh.shape # Checks that meshes are of same size
-        #    self.mesh = newMesh
-        #except:
-        #    print('Dimensions of new and old mesh do not match')
         pass
     
 class LeftSideRoom(Room):
