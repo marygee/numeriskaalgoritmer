@@ -30,6 +30,7 @@ class Solver:
         K = self.Kmatrix(room)
         F = self.Fvector(room, leftBoundaryCond, rightBoundaryCond)
         newroom, leftBC, rightBC = self.timeStep(room, K, F, leftBoundaryCond, rightBoundaryCond)
+        return newroom, leftBC, rightBC
         
     def Fvector(self, room, leftBoundaryCond, rightBoundaryCond):
         roomType = type(room).__name__
