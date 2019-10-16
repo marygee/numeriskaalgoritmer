@@ -88,7 +88,7 @@ class MiddleRoom(Room):
             
     def UpdateMesh(self, newMesh, leftBoundaryCondition, rightBoundaryCondition):
         self.mesh[1:-1,1:-1] = newMesh
-        self.mesh[-len(leftBoundaryCondition):,0] = leftBoundaryCondition
-        self.mesh[:len(rightBoundaryCondition),-1] = rightBoundaryCondition 
+        self.mesh[-len(leftBoundaryCondition)-1:-1,0] = leftBoundaryCondition #Här ändrade jag lite /Hugo
+        self.mesh[1:len(rightBoundaryCondition)+1,-1] = rightBoundaryCondition #Här ändrade jag lite /Hugo
 
         

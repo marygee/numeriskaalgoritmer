@@ -17,9 +17,9 @@ nprocessors = comm.Get_size()
 #print('helloworldfromprocess' , rank)
 
 # Initialize the three rooms
-LeftSideRoom = LeftSideRoom(height = 1, width = 1, deltaX = 1/20, gammaH = 40, gammaWF = 5, gammaNormal = 15)
-RightSideRoom = RightSideRoom(height = 1, width = 1, deltaX = 1/20, gammaH = 40, gammaWF = 5, gammaNormal = 15)
-MiddleRoom = MiddleRoom(height = 2, width = 1, deltaX = 1/20, gammaH = 40, gammaWF = 5, gammaNormal = 15)
+#LeftSideRoom = LeftSideRoom(height = 1, width = 1, deltaX = 1/20, gammaH = 40, gammaWF = 5, gammaNormal = 15)
+#RightSideRoom = RightSideRoom(height = 1, width = 1, deltaX = 1/20, gammaH = 40, gammaWF = 5, gammaNormal = 15)
+#MiddleRoom = MiddleRoom(height = 2, width = 1, deltaX = 1/20, gammaH = 40, gammaWF = 5, gammaNormal = 15)
 
 class Solver:
     
@@ -27,13 +27,23 @@ class Solver:
         pass
     
     def __call__(self, room, leftBoundaryCond = None, rightBoundaryCond = None):
+        """
+        Solves the heat equation for a given room and boundary conditions.  
+        
+        """
         K = self.Kmatrix(room)
         F = self.Fvector(room, leftBoundaryCond, rightBoundaryCond)
         newroom, leftBC, rightBC = self.timeStep(room, K, F, leftBoundaryCond, rightBoundaryCond)
         return newroom, leftBC, rightBC
         
     def Fvector(self, room, leftBoundaryCond, rightBoundaryCond):
+        """
+        Creates the F-vector of the problem for the given room and boundary conditions. 
+        """
         roomType = type(room).__name__
+        
+        print('meshH: ', room.meshH)
+        print('meshW: ', room.meshW)
         
         if roomType == 'LeftSideRoom': #Normal uppe och nere, H till vänster, leftBC till höger
             F = zeros((room.meshW-1)*(room.meshH-2)) 
@@ -42,7 +52,11 @@ class Solver:
                 F[-i-1] = room.gammaNormal
             for i in range(room.meshH-2):
                 F[i*(room.meshW-1)] += room.gammaH #Vänster sida
-                F[i*(room.meshW-1) + room.meshW-2] += leftBoundaryCond[i] #Höger sida
+                F[i*(room.meshW-1) + room.meshW-2] -= 2*room.deltaX*leftBoundaryCond[i] #Höger sida
+#            F = -F
+            print(roomType)
+            print(F)
+            
         
         elif roomType == 'RightSideRoom': #Normal uppe och nere, H till höger, rightBC till vänster
             F = zeros((room.meshW-1)*(room.meshH-2))            
@@ -50,8 +64,11 @@ class Solver:
                 F[i] = room.gammaNormal
                 F[-i-1] = room.gammaNormal
             for i in range(room.meshH-2):
-                F[i*(room.meshW-1)] += rightBoundaryCond[i]  #Vänster sida
+                F[i*(room.meshW-1)] -= 2*room.deltaX*rightBoundaryCond[i]  #Vänster sida
                 F[i*(room.meshW-1) + room.meshW-2] += room.gammaH #Höger sida
+#            F = -F
+            print(roomType)
+            print(F)
 
         elif roomType == 'MiddleRoom':
             F = zeros((room.meshW-2)*(room.meshH-2))
@@ -64,12 +81,16 @@ class Solver:
             for i in range(room.meshH-2):
                 F[i*(room.meshW-2)] += leftSide[i]
                 F[i*(room.meshW-2) + room.meshW-3] += rightSide[i]  
-            F = -F
+#            F = -F
         else:
             print('Room type unknown.')
+        F = -F
         return F
     
     def Kmatrix(self, room):
+        """
+        Creates the K-matrix for the heat equation of the given room. 
+        """
         roomType = type(room).__name__
         if roomType == 'LeftSideRoom':
             a = zeros((room.meshW-1)*(room.meshH-2))
@@ -78,11 +99,14 @@ class Solver:
             a[room.meshW-1] = 1
             K = toeplitz(a)
             for i in range(room.meshH-2): 
-                K[i*(room.meshW-1)+room.meshW-2, i*(room.meshW-1)+room.meshW-3] = 1 # Redandant for Maria method but crucial in case of Wiki method (if so, change to 0)
-                K[i*(room.meshW-1)+room.meshW-2, i*(room.meshW-1)+room.meshW-2] = -3 # In case of Wiki method, replace -3 with -2
+                #K[i*(room.meshW-1)+room.meshW-2, i*(room.meshW-1)+room.meshW-3] = 1 # Redandant for Maria method but crucial in case of Wiki method (if so, change to 0)
+                #K[i*(room.meshW-1)+room.meshW-2, i*(room.meshW-1)+room.meshW-2] = -3 # In case of Wiki method, replace -3 with -2
+                K[i*(room.meshW-1)+room.meshW-2, i*(room.meshW-1)+room.meshW-3] = 2
             for i in range(room.meshH-3): 
                 K[i*(room.meshW-1)+room.meshW-2, i*(room.meshW-1)+room.meshW-1] = 0
                 K[i*(room.meshW-1)+room.meshW-1, i*(room.meshW-1)+room.meshW-2] = 0
+            #print(roomType)
+            #print(K)
         elif roomType == 'RightSideRoom':
             a = zeros((room.meshW-1)*(room.meshH-2))
             a[0] = -4
@@ -90,11 +114,15 @@ class Solver:
             a[room.meshW-1] = 1
             K = toeplitz(a)
             for i in range(room.meshH-2):
-                K[i*(room.meshW-1), i*(room.meshW-1)+1] = 1 # Redandant for Maria method but crucial in case of Wiki method (if so, change to 0)
-                K[i*(room.meshW-1), i*(room.meshW-1)] = -3 # In case of Wiki method, replace -3 with -2
+#                K[i*(room.meshW-1), i*(room.meshW-1)+1] = 1 # Redandant for Maria method but crucial in case of Wiki method (if so, change to 0)
+                #K[i*(room.meshW-1), i*(room.meshW-1)] = -3 # In case of Wiki method, replace -3 with -2
+                K[i*(room.meshW-1), i*(room.meshW-1)+1] = 2 # New Neumann
             for i in range(room.meshH-3):
                 K[i*(room.meshW-1)+room.meshW-2, i*(room.meshW-1)+room.meshW-1] = 0
                 K[i*(room.meshW-1)+room.meshW-1, i*(room.meshW-1)+room.meshW-2] = 0
+            #print(roomType)
+            #print('meshH: ', room.meshH)
+            #print(K)
         elif roomType == 'MiddleRoom':
             a = zeros((room.meshW-2)*(room.meshH-2))
             a[0] = -4
@@ -104,11 +132,16 @@ class Solver:
             for i in range(room.meshH-3):
                 K[i*(room.meshW-2)+room.meshW-3, i*(room.meshW-2)+room.meshW-2] = 0
                 K[i*(room.meshW-2)+room.meshW-2, i*(room.meshW-2)+room.meshW-3] = 0
+            #print(roomType)
+            #print(K)
         else:
             print('Room type unknown.')
         return K
 
     def timeStep(self, room, K, F, leftBoundaryCond, rightBoundaryCond, omega = 0.8):
+        """
+        Solves the heat equation for the given room and heat distribution. 
+        """
         roomType = type(room).__name__
         
         u = solve(K, F)
@@ -136,22 +169,33 @@ class Solver:
             u_relax = omega*u + (1-omega)*room.mesh[1:-1,1:-1] #Relaxation
             leftBC_relax = omega*leftBoundaryCond + (1-omega)*room.mesh[-len(leftBoundaryCond):,0]
             rightBC_relax = omega*rightBoundaryCond + (1-omega)*room.mesh[:len(rightBoundaryCond),-1]
-        
+            
             room.UpdateMesh(u_relax, leftBC_relax, rightBC_relax)         
             
             leftBoundaryCond -= u_relax[-len(leftBoundaryCond):,0] #Neumann condition
             rightBoundaryCond -= u_relax[0:len(rightBoundaryCond),-1] #Neumann condition
+            
            
         return room, leftBoundaryCond, rightBoundaryCond     
 
-testSolver = Solver()
-
-gamma1Middle = 22*ones(int((MiddleRoom.meshH-3)/2))
-gamma2Middle = 23*ones(int((MiddleRoom.meshH-3)/2))
-newMiddleRoom = testSolver(MiddleRoom, leftBoundaryCond = gamma1Middle, rightBoundaryCond = gamma2Middle)
-
-gammaLeft = -1*ones(int(LeftSideRoom.meshH-2))
-newLeftSideRoom = testSolver(LeftSideRoom, leftBoundaryCond = gammaLeft)
-
-gammaRight = -1*ones(int(RightSideRoom.meshH-2))
-newRightSideRoom = testSolver(RightSideRoom, rightBoundaryCond = gammaRight)
+#testSolver = Solver()
+#
+#gamma1Middle = 22*ones(int((MiddleRoom.meshH-3)/2))
+#gamma2Middle = 23*ones(int((MiddleRoom.meshH-3)/2))
+#
+#gammaLeft = -1*ones(int(LeftSideRoom.meshH-2))
+#
+#gammaRight = -1*ones(int(RightSideRoom.meshH-2))
+#
+#MiddleRoom, gammaLeft, gammaRight = testSolver(MiddleRoom, leftBoundaryCond = gamma1Middle, rightBoundaryCond = gamma2Middle)
+#LeftSideRoom, gamma1Middle, no = testSolver(LeftSideRoom, leftBoundaryCond = gammaLeft)
+#RightSideRoom, no, gammaRight = testSolver(RightSideRoom, rightBoundaryCond = gammaRight)
+#plt.imshow(MiddleRoom.mesh, cmap='hot', interpolation='nearest')
+#plt.colorbar()
+#plt.show()
+#plt.imshow(LeftSideRoom.mesh, cmap='hot', interpolation='nearest')
+#plt.colorbar()
+#plt.show()
+#plt.imshow(RightSideRoom.mesh, cmap='hot', interpolation='nearest')
+#plt.colorbar()
+#plt.show()
